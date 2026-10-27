@@ -1,0 +1,8 @@
+{
+  "hosting": {
+    "site": "agentdecoy-fixture",
+    "public": "public",
+    "ignore": ["firebase.json"],
+    "headers": [{ "source": "**", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }] }]
+  }
+}

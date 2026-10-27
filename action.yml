@@ -1,13 +1,22 @@
 name: 'AgentDecoy scan'
-description: 'Fail the build when a hostile AI agent can steal, abuse or trick your site: leaked keys, AI tool configs, open MCP or AI servers, hidden prompts.'
+description: 'Catch leaked keys and AI configs in your repo and on your live site before hostile AI agents and scanners do.'
 author: 'Kyle Clouthier'
 branding:
   icon: 'shield'
   color: 'red'
 inputs:
   site:
-    description: 'The site to scan, for example example.com'
-    required: true
+    description: 'The site to scan, for example example.com. Leave empty to run only the repo check.'
+    required: false
+    default: ''
+  repo-check:
+    description: 'Also check the checked-out repo for committed .env files, secret keys and AI tool configs with credentials (needs actions/checkout first): true or false'
+    required: false
+    default: 'true'
+  repo-fail:
+    description: 'Fail the build when the repo check finds something (otherwise it only warns): true or false'
+    required: false
+    default: 'false'
   fail-on:
     description: 'Threat level that fails the build: critical, elevated or guarded'
     required: false
@@ -36,10 +45,20 @@ outputs:
   grade:
     description: 'Defense grade letter (kept for older workflows)'
     value: ${{ steps.scan.outputs.grade }}
+  repo-findings:
+    description: 'How many committed secrets or AI tool credentials the repo check found'
+    value: ${{ steps.repo.outputs.repo-findings }}
 runs:
   using: 'composite'
   steps:
+    - id: repo
+      if: ${{ inputs.repo-check == 'true' }}
+      shell: bash
+      env:
+        FAIL: ${{ inputs.repo-fail }}
+      run: bash "${{ github.action_path }}/repo-check.sh"
     - id: scan
+      if: ${{ inputs.site != '' }}
       shell: bash
       env:
         SITE: ${{ inputs.site }}
@@ -48,7 +67,7 @@ runs:
         KEY: ${{ inputs.api-key }}
       run: |
         set -euo pipefail
-        url="https://simgen.dev/api/agent-grade?site=$(jq -rn --arg s "$SITE" '$s|@uri')"
+        url="https://simgen.dev/api/agent-grade?src=github-action&site=$(jq -rn --arg s "$SITE" '$s|@uri')"
         if [ -n "$KEY" ]; then
           resp=$(curl -sS --max-time 120 -H "x-agent-grade-key: $KEY" "$url")
         else

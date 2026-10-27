@@ -1,0 +1,6 @@
+{
+  "_note": "AgentDecoy test fixture. A fake AI coding-tool config left public on purpose. Nothing here works.",
+  "mcpServers": {
+    "fixture-db": { "command": "npx", "args": ["example-mcp-server"], "env": { "EXAMPLE_TOKEN": "not-a-real-token" } }
+  }
+}

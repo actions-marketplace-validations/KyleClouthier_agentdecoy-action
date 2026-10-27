@@ -1,4 +1,10 @@
+<img src="https://simgen.dev/agentdecoy/logo.svg" width="72" height="72" alt="AgentDecoy logo">
+
 # AgentDecoy scan
+
+[![Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-AgentDecoy%20scan-d4a017?logo=github)](https://github.com/marketplace/actions/agentdecoy-scan) [![release](https://img.shields.io/github/v/release/KyleClouthier/agentdecoy-action?color=d4a017)](https://github.com/KyleClouthier/agentdecoy-action/releases) [![self-test](https://github.com/KyleClouthier/agentdecoy-action/actions/workflows/self-test.yml/badge.svg)](https://github.com/KyleClouthier/agentdecoy-action/actions/workflows/self-test.yml) [![leak clock](https://img.shields.io/badge/leaked%20AI%20key%20used%20in-3%20seconds-red)](https://simgen.dev/agentdecoy/leak-clock/)
+
+> Free and open source. If it catches something for you, a star helps other people find it.
 
 **Security for the AI-agent era, in your deploy pipeline.** This Action scans your site or app after every deploy the way a hostile AI agent would, and fails the build when it finds something the agent could steal, abuse or be told to do.
 
@@ -27,6 +33,12 @@ AI-built apps make this easy for them. One prompt can put a key in the browser, 
 
 This is the same scan as the free one at [simgen.dev/agentdecoy](https://simgen.dev/agentdecoy/). It only reads what any visitor can read: it never logs in, submits a form, calls an MCP tool or a model, or reads a database row.
 
+## New: the repo check
+
+A fake OpenAI key committed to a public GitHub repo was used **15 seconds** after the repo went public. The same key in a public Gist: **3 seconds**. ([live results](https://simgen.dev/agentdecoy/leak-clock/))
+
+So the Action now also checks the repo it runs in, before anything is pushed or deployed: committed `.env` files, OpenAI, Anthropic, AWS, Stripe, GitHub, Slack and Google keys in tracked files, private key files, and AI tool configs (`.cursor/mcp.json`, `.mcp.json`, `.vscode/mcp.json`, `.claude/settings.local.json`) that carry tokens. It shows the file and line, never the full secret. It warns by default; set `repo-fail: true` to fail the build.
+
 ## Use
 
 ```yaml
@@ -40,10 +52,12 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4          # needed for the repo check
       - uses: KyleClouthier/agentdecoy-action@v3
         with:
-          site: example.com
+          site: example.com      # leave out to run only the repo check
           fail-on: elevated
+          repo-fail: true
 ```
 
 Run it after your deploy job (`needs: deploy`) so it scans what just went live.
@@ -52,7 +66,9 @@ Run it after your deploy job (`needs: deploy`) so it scans what just went live.
 
 | Input | Required | Default | What it does |
 | --- | --- | --- | --- |
-| `site` | yes | | The site to scan |
+| `site` | no | | The site to scan. Leave it out to run only the repo check. |
+| `repo-check` | no | `true` | Check the checked-out repo for committed secrets and AI tool configs with credentials |
+| `repo-fail` | no | `false` | Fail the build when the repo check finds something (otherwise it warns) |
 | `fail-on` | no | `critical` | Threat level that fails the build: `critical`, `elevated` or `guarded` |
 | `api-key` | no | | An AgentDecoy Pro or Agency API key: 120 scans an hour instead of 10. Store it as a secret: `api-key: ${{ secrets.AGENTDECOY_KEY }}` |
 | `min-grade` | no | | Older setting, still honoured: lowest defense grade that passes (A to F). Leave it out to use `fail-on`. |
@@ -66,6 +82,7 @@ Run it after your deploy job (`needs: deploy`) so it scans what just went live.
 | `findings` | The finding ids, comma separated, for example `script_secrets,open_mcp` |
 | `score` | Defense score out of 100 |
 | `grade` | Defense grade letter, kept for older workflows |
+| `repo-findings` | How many committed secrets or AI tool credentials the repo check found |
 
 Critical findings show as errors on the run page, elevated ones as warnings, and the run summary lists them all with a link to the full report and its fixes.
 
